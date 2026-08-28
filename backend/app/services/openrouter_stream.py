@@ -1,8 +1,12 @@
 """Stream chat completions from OpenRouter (OpenAI-compatible API).
 
-The whole call — including opening the stream — runs inside the async generator
-so that an auth/network error raised on stream-open becomes a clean ``error``
-frame instead of a half-written HTTP response.
+Reliability model: free models get saturated, so we fall back across a small
+list of *known chat* models ourselves (rather than OpenRouter's `models` array,
+which can opaquely route to a non-chat model and emit junk like
+"User Safety: safe"). We try each model in order; if one errors *before*
+producing any token we move to the next. The whole thing runs inside the async
+generator so a failure becomes a clean SSE ``error`` frame, never a broken
+response.
 """
 from __future__ import annotations
 
@@ -22,6 +26,9 @@ from app.config import Settings
 
 logger = logging.getLogger("chatapp.openrouter")
 
+# Errors worth trying the next model for (transient / provider-side).
+RETRYABLE = (RateLimitError, APITimeoutError, APIError, asyncio.TimeoutError)
+
 
 async def stream_completion(
     messages: list[dict], settings: Settings
@@ -30,34 +37,53 @@ async def stream_completion(
         base_url=settings.openrouter_base_url,
         api_key=settings.openrouter_api_key,
         timeout=settings.request_timeout_seconds,
-        max_retries=1,
+        max_retries=0,
     )
+    headers = {"HTTP-Referer": settings.app_url, "X-Title": settings.app_title}
     try:
-        stream = await client.chat.completions.create(
-            model=settings.openrouter_model,
-            messages=messages,
-            stream=True,
-            temperature=0.3,
-            extra_headers={
-                "HTTP-Referer": settings.app_url,
-                "X-Title": settings.app_title,
-            },
-            # OpenRouter fallback routing: try each model in order until one
-            # is available, so a saturated free model doesn't break the reply.
-            extra_body={"models": settings.model_list},
-        )
-        async for chunk in stream:
-            if not chunk.choices:
+        last_error: Exception | None = None
+        for model in settings.model_list:
+            produced = False
+            try:
+                stream = await client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    stream=True,
+                    temperature=0.3,
+                    extra_headers=headers,
+                )
+                async for chunk in stream:
+                    if not chunk.choices:
+                        continue
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        produced = True
+                        yield {"type": "delta", "content": delta}
+                if produced:
+                    yield {"type": "done", "finish_reason": "stop"}
+                    return
+                # Model returned nothing — try the next one.
+                logger.warning("Model %s returned an empty response; trying next", model)
+            except AuthenticationError:
+                raise  # same key for every model — no point retrying
+            except RETRYABLE as exc:
+                if produced:
+                    raise  # already mid-stream; can't switch models cleanly
+                last_error = exc
+                logger.warning("Model %s failed (%s); trying next", model, type(exc).__name__)
                 continue
-            delta = chunk.choices[0].delta.content
-            if delta:
-                yield {"type": "delta", "content": delta}
-        yield {"type": "done", "finish_reason": "stop"}
+
+        # Every model failed or was empty.
+        if last_error is not None:
+            raise last_error
+        yield {"type": "error",
+               "message": "No free model returned a response. Please try again shortly."}
+
     except AuthenticationError:
         yield {"type": "error", "message": "Invalid or missing OpenRouter API key."}
     except RateLimitError:
         yield {"type": "error",
-               "message": "Rate limited by OpenRouter (free tier). Please try again shortly."}
+               "message": "All free models are rate-limited right now. Please try again shortly."}
     except (APITimeoutError, asyncio.TimeoutError):
         yield {"type": "error", "message": "The AI request timed out. Please try again."}
     except APIError as exc:
