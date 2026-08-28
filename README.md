@@ -3,11 +3,12 @@
 An AI chatbot that answers questions about real-estate listings **scraped from
 [DarGlobal](https://darglobal.co.uk) and [Wasalt](https://wasalt.sa)**. It uses
 Retrieval-Augmented Generation (RAG) grounded in that scraped data and a **free
-model on [OpenRouter](https://openrouter.ai)**. Fully containerized and deployed
-on Hugging Face Spaces.
+model on [OpenRouter](https://openrouter.ai)**. Fully containerized with Docker
+and deployed on Render.
 
-> **🔗 Live demo:** _add your Space URL here after deploying, e.g._
-> `https://<your-user>-real-estate-chatbot.hf.space`
+> **🔗 Live demo:** https://real-estate-chatbot-47lr.onrender.com
+>
+> _(Free instance — the first request after ~15 min idle can take ~50s to wake.)_
 
 ---
 
