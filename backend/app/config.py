@@ -22,8 +22,9 @@ class Settings(BaseSettings):
     # override with a specific ":free" model id if you prefer.
     openrouter_model: str = "openrouter/free"
 
-    # Embeddings (local, no API cost).
+    # Embeddings (local ONNX via fastembed, no API cost).
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_cache_dir: str = str(ROOT / ".fastembed_cache")
 
     # Retrieval / data.
     data_dir: str = str(ROOT / "data")

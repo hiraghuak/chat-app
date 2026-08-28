@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from app.config import Settings
+from app.embedder import Embedder
 from app.schemas import ChatMessage
 
 CANDIDATE_POOL = 40
@@ -36,7 +36,7 @@ class RagEngine:
     def __init__(self, settings: Settings):
         self.settings = settings
         data_dir = Path(settings.data_dir)
-        self.model = SentenceTransformer(settings.embedding_model)
+        self.embedder = Embedder(settings)
         self.embeddings: np.ndarray = np.load(data_dir / "embeddings.npy").astype("float32")
         self.listings: list[dict] = json.loads(
             (data_dir / "meta.json").read_text(encoding="utf-8")
@@ -129,9 +129,7 @@ class RagEngine:
             return [], {}, 0.0
         filters = self._parse_filters(query)
 
-        vec = self.model.encode(
-            [query], convert_to_numpy=True, normalize_embeddings=True
-        ).astype("float32")[0]
+        vec = self.embedder.encode([query])[0]
         # Cosine similarity (all vectors are L2-normalized) via one matmul, then
         # take the top candidates. Trivial at this dataset size.
         sims = self.embeddings @ vec

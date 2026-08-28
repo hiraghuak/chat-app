@@ -17,9 +17,9 @@ import json
 from pathlib import Path
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
 
 from app.config import get_settings
+from app.embedder import Embedder
 
 
 def listing_to_document(listing: dict) -> str:
@@ -64,13 +64,10 @@ def build_index() -> None:
         raise SystemExit("data/listings.json is empty — run the scraper first.")
 
     print(f"[build_index] {len(listings)} listings; loading {settings.embedding_model}")
-    model = SentenceTransformer(settings.embedding_model)
+    embedder = Embedder(settings)
     docs = [listing_to_document(l) for l in listings]
 
-    embeddings = model.encode(
-        docs, batch_size=64, show_progress_bar=True,
-        convert_to_numpy=True, normalize_embeddings=True,
-    ).astype("float32")
+    embeddings = embedder.encode(docs).astype("float32")
 
     np.save(data_dir / "embeddings.npy", embeddings)
     # Store the document text alongside each listing for prompt building.

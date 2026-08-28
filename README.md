@@ -1,13 +1,3 @@
----
-title: DarGlobal Wasalt Real Estate Chatbot
-emoji: 🏠
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # 🏠 Real Estate RAG Chatbot — DarGlobal × Wasalt
 
 An AI chatbot that answers questions about real-estate listings **scraped from
@@ -96,14 +86,25 @@ curl -N -X POST http://localhost:7860/api/chat \
   -d '{"messages":[{"role":"user","content":"3-bed apartments for sale in Riyadh under 2M"}]}'
 ```
 
-## Deploy to Hugging Face Spaces
+## Deploy to Render (free, no credit card)
 
-1. Create a new **Space** → SDK: **Docker**.
-2. Push this repo to it (the `README.md` frontmatter above configures the runtime
-   on port 7860; the committed `data/` snapshot is what the image serves).
-3. In **Settings → Variables and secrets**, add secret `OPENROUTER_API_KEY`.
-4. The Space builds and boots → your public URL is
-   `https://<user>-<space>.hf.space`. Put it at the top of this README.
+The image is intentionally small (~470MB, ~200MB RAM at runtime), so it fits
+Render's free 512MB web-service tier. A `render.yaml` blueprint is included.
+
+1. Push this repo to GitHub.
+2. On [render.com](https://render.com) → **New → Blueprint** → connect the repo
+   (Render reads `render.yaml` and creates a free Docker web service), **or**
+   **New → Web Service** → pick the repo → it auto-detects the `Dockerfile` →
+   choose the **Free** plan.
+3. In the service's **Environment** tab, add `OPENROUTER_API_KEY` = your key.
+4. Deploy. First build takes a few minutes; then your public URL is
+   `https://<service-name>.onrender.com`. Put it at the top of this README.
+
+> Free instances sleep after ~15 min idle and cold-start (~30–60s) on the next
+> request — expected for a free demo. The app reads `$PORT` (Render injects it)
+> and falls back to 7860 locally.
+
+_The same image also runs on any Docker host (Google Cloud Run, Koyeb, a VM, …)._
 
 ## Re-running the scraper (optional)
 

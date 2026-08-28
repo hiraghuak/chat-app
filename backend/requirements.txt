@@ -2,5 +2,7 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 openai==1.59.6
 pydantic-settings==2.7.1
-sentence-transformers==3.3.1
+# fastembed = ONNX embeddings (all-MiniLM-L6-v2) — no torch, so the image and
+# runtime memory stay small enough for a 512MB free host.
+fastembed==0.5.1
 numpy==1.26.4

@@ -1,0 +1,17 @@
+# Render blueprint — deploys the Dockerfile as a free web service.
+# In Render: New → Blueprint → connect this repo. Then set OPENROUTER_API_KEY
+# in the service's Environment tab (it is intentionally not stored in the repo).
+services:
+  - type: web
+    name: real-estate-chatbot
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false          # set this secret manually in the dashboard
+      - key: OPENROUTER_MODEL
+        value: openrouter/free

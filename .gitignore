@@ -19,3 +19,6 @@ scraper/.venv/
 .DS_Store
 .vscode/
 .idea/
+
+# fastembed model cache
+.fastembed_cache/
