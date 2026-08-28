@@ -1,0 +1,17 @@
+# Local convenience runner. Mirrors the Hugging Face deployment (single service,
+# port 7860). Put your key in a local .env file (see .env.example).
+services:
+  app:
+    build: .
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:7860/health').status==200 else 1)"]
+      interval: 20s
+      timeout: 4s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped

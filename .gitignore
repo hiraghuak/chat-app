@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Python
+**/.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Scraper raw cache / Playwright
+data/raw/
+scraper/.venv/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
