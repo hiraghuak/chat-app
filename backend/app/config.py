@@ -17,10 +17,14 @@ class Settings(BaseSettings):
     # (and /health) still boots without it; it is validated per-request instead.
     openrouter_api_key: str | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    # OpenRouter's auto-router over currently-available free models. Robust to
-    # the free catalog rotating and to individual models being saturated —
-    # override with a specific ":free" model id if you prefer.
-    openrouter_model: str = "openrouter/free"
+    # Primary free chat model + an ordered fallback list. OpenRouter tries them
+    # in order (via the `models` array), so if one is saturated/unavailable it
+    # falls through to the next. We pin known-good *chat* models rather than the
+    # `openrouter/free` auto-router, which can route to non-chat models (e.g. a
+    # content-safety classifier).
+    openrouter_model: str = "minimax/minimax-m3:free"
+    # OpenRouter allows at most 3 models in the routing array, so keep 2 backups.
+    openrouter_fallback_models: str = "google/gemma-4-31b-it:free,z-ai/glm-5.2:free"
 
     # Embeddings (local ONNX via fastembed, no API cost).
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
@@ -44,6 +48,14 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
+    @property
+    def model_list(self) -> list[str]:
+        """Primary first, then fallbacks (deduped). OpenRouter caps this at 3."""
+        models = [self.openrouter_model] + [
+            m.strip() for m in self.openrouter_fallback_models.split(",") if m.strip()
+        ]
+        return list(dict.fromkeys(models))[:3]
 
 
 @lru_cache

@@ -42,6 +42,9 @@ async def stream_completion(
                 "HTTP-Referer": settings.app_url,
                 "X-Title": settings.app_title,
             },
+            # OpenRouter fallback routing: try each model in order until one
+            # is available, so a saturated free model doesn't break the reply.
+            extra_body={"models": settings.model_list},
         )
         async for chunk in stream:
             if not chunk.choices:
